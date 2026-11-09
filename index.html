@@ -74,19 +74,16 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 let audioCtx = null;
+ const benjaImg = new Image();
+benjaImg.src = 'IMG_0244.jpeg';
+
 
 // Miniatura de Adrien Benjamin con su pose y cabello
 (function predrawThumb(){
   const tc = document.getElementById('faceThumb');
   const tx = tc.getContext('2d');
-  tx.fillStyle = '#ffdfba';
-  tx.beginPath(); tx.arc(60, 60, 50, 0, Math.PI*2); tx.fill();
-  tx.fillStyle = '#111';
-  tx.beginPath(); tx.arc(60, 48, 52, Math.PI, Math.PI*2); tx.fill();
-  tx.fillStyle = '#222';
-  tx.beginPath(); tx.arc(46, 58, 6, 0, Math.PI*2); tx.fill();
-  tx.beginPath(); tx.arc(74, 58, 6, 0, Math.PI*2); tx.fill();
-  tx.fillStyle = '#ffdfba';
+  tx.drawImage(benjaImg, 0, 0, 120, 120);
+
   tx.fillRect(52, 66, 16, 20);
 })();
 
@@ -232,19 +229,8 @@ function draw() {
   // Dibujar a Benja
   ctx.save();
   ctx.translate(benja.x, benja.y);
-  ctx.fillStyle = '#0288d1';
-  ctx.fillRect(8, 28, 30, 32);
-  ctx.fillStyle = '#ffca28';
-  ctx.font = 'bold 12px sans-serif';
-  ctx.fillText('B', 19, 48);
+  ctx.drawImage(benjaImg, 0, 0, benja.w, benja.h);
 
-  ctx.fillStyle = '#ffdfba';
-  ctx.beginPath(); ctx.arc(23, 16, 15, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#111';
-  ctx.beginPath(); ctx.arc(23, 12, 16, Math.PI, Math.PI*2); ctx.fill();
-
-  ctx.fillStyle = '#ffdfba';
-  ctx.fillRect(17, 16, 8, 8);
   ctx.restore();
 
   // Texto
