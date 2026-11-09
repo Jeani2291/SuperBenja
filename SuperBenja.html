@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0e17">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>SUPER BENJA - Ziva Games</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+  body, html { width: 100%; height: 100%; overflow: hidden; background: #070a12; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  
+  #game-wrap { position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; background: #000; }
+  canvas { width: 100%; height: 100%; object-fit: contain; }
+
+  /* Pantalla de inicio para desbloquear Safari y Chrome en celulares */
+  #tap-to-start {
+    position: absolute; inset: 0; z-index: 100; background: linear-gradient(135deg, #0d1b2a, #1b263b);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px;
+  }
+  .title-logo { font-size: 38px; font-weight: 900; color: #ffca28; text-shadow: 0 4px 15px rgba(255,202,40,0.5); letter-spacing: 2px; margin-bottom: 6px; }
+  .subtitle { font-size: 18px; color: #64b5f6; font-weight: 700; margin-bottom: 25px; }
+  .avatar-preview { width: 110px; height: 110px; border-radius: 50%; border: 4px solid #ffca28; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.6); margin-bottom: 25px; }
+  .avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
+  .btn-play {
+    background: linear-gradient(180deg, #ffca28, #f57f17); border: none; border-radius: 50px;
+    padding: 16px 45px; font-size: 22px; font-weight: 900; color: #1a1a1a; cursor: pointer;
+    box-shadow: 0 8px 20px rgba(245,127,23,0.4); text-transform: uppercase;
+  }
+  .btn-play:active { transform: scale(0.96); }
+
+  /* Controles tactiles para celular */
+  #touch-ui { position: absolute; inset: 0; pointer-events: none; z-index: 50; display: none; }
+  .d-pad { position: absolute; left: 18px; bottom: 20px; display: flex; gap: 12px; pointer-events: auto; }
+  .act-pad { position: absolute; right: 18px; bottom: 20px; display: flex; gap: 14px; pointer-events: auto; }
+  .ctrl-btn {
+    width: 68px; height: 68px; border-radius: 50%; background: rgba(255,255,255,0.18);
+    border: 2px solid rgba(255,255,255,0.45); backdrop-filter: blur(5px);
+    display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 900; color: #fff;
+  }
+  .ctrl-btn:active { background: rgba(255,202,40,0.6); transform: scale(0.92); }
+  .btn-jump { background: rgba(0,230,118,0.32); border-color: #00e676; width: 76px; height: 76px; }
+  .btn-boost { background: rgba(171,71,188,0.32); border-color: #ab47bc; font-size: 20px; }
+</style>
+</head>
+<body>
+
+<div id="game-wrap">
+  <canvas id="gameCanvas" width="960" height="540"></canvas>
+
+  <div id="tap-to-start">
+    <div class="title-logo">SUPER BENJA</div>
+    <div class="subtitle">ZIVA GAMES PRESENTA</div>
+    <div class="avatar-preview">
+      <canvas id="faceThumb" width="120" height="120"></canvas>
+    </div>
+    <button class="btn-play" onclick="iniciar()">▶ EMPEZAR</button>
+  </div>
+
+  <div id="touch-ui">
+    <div class="d-pad">
+      <div class="ctrl-btn" id="b-left">◀</div>
+      <div class="ctrl-btn" id="b-right">▶</div>
+    </div>
+    <div class="act-pad">
+      <div class="ctrl-btn btn-boost" id="b-boost">⚡</div>
+      <div class="ctrl-btn btn-jump" id="b-jump">▲</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let audioCtx = null;
+
+// Miniatura de Adrien Benjamin con su pose y cabello
+(function predrawThumb(){
+  const tc = document.getElementById('faceThumb');
+  const tx = tc.getContext('2d');
+  tx.fillStyle = '#ffdfba';
+  tx.beginPath(); tx.arc(60, 60, 50, 0, Math.PI*2); tx.fill();
+  tx.fillStyle = '#111';
+  tx.beginPath(); tx.arc(60, 48, 52, Math.PI, Math.PI*2); tx.fill();
+  tx.fillStyle = '#222';
+  tx.beginPath(); tx.arc(46, 58, 6, 0, Math.PI*2); tx.fill();
+  tx.beginPath(); tx.arc(74, 58, 6, 0, Math.PI*2); tx.fill();
+  tx.fillStyle = '#ffdfba';
+  tx.fillRect(52, 66, 16, 20);
+})();
+
+function iniciar() {
+  document.getElementById('tap-to-start').style.display = 'none';
+  document.getElementById('touch-ui').style.display = 'block';
+
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    emitSound(587, 0.15);
+  } catch(e) {}
+
+  requestAnimationFrame(gameLoop);
+}
+
+function emitSound(freq, dur) {
+  if (!audioCtx) return;
+  try {
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.frequency.value = freq;
+    osc.connect(g);
+    g.connect(audioCtx.destination);
+    osc.start();
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+    osc.stop(audioCtx.currentTime + dur);
+  } catch(e) {}
+}
+
+const input = { left: false, right: false, jump: false, boost: false };
+function bindTouch(id, k) {
+  const el = document.getElementById(id);
+  el.addEventListener('touchstart', e => { e.preventDefault(); input[k] = true; if(k === 'jump') tryJump(); });
+  el.addEventListener('touchend', e => { e.preventDefault(); input[k] = false; });
+}
+bindTouch('b-left', 'left');
+bindTouch('b-right', 'right');
+bindTouch('b-jump', 'jump');
+bindTouch('b-boost', 'boost');
+
+// Controles de teclado para PC
+window.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft' || e.key === 'a') input.left = true;
+  if (e.key === 'ArrowRight' || e.key === 'd') input.right = true;
+  if (e.key === 'ArrowUp' || e.key === ' ' || e.key === 'w') { input.jump = true; tryJump(); }
+});
+window.addEventListener('keyup', e => {
+  if (e.key === 'ArrowLeft' || e.key === 'a') input.left = false;
+  if (e.key === 'ArrowRight' || e.key === 'd') input.right = false;
+  if (e.key === 'ArrowUp' || e.key === ' ' || e.key === 'w') input.jump = false;
+});
+
+// Heroe Benja
+let benja = { x: 80, y: 360, vx: 0, vy: 0, w: 46, h: 62, onGround: false, score: 0 };
+
+const platforms = [
+  { x: 0, y: 460, w: 960, h: 80, mat: 'lego', color: '#0055d4' },
+  { x: 180, y: 370, w: 140, h: 22, mat: 'lego', color: '#d32f2f' },
+  { x: 380, y: 290, w: 150, h: 24, mat: 'clay', color: '#ec407a' },
+  { x: 600, y: 220, w: 160, h: 22, mat: 'sand', color: '#fbc02d' },
+  { x: 820, y: 160, w: 100, h: 22, mat: 'lego', color: '#00c853' }
+];
+
+let stars = [
+  { x: 240, y: 320, collected: false },
+  { x: 450, y: 230, collected: false },
+  { x: 670, y: 160, collected: false },
+  { x: 860, y: 110, collected: false }
+];
+
+function tryJump() {
+  if (benja.onGround) {
+    benja.vy = input.boost ? -17 : -14;
+    benja.onGround = false;
+    emitSound(input.boost ? 784 : 659, 0.12);
+  }
+}
+
+function update() {
+  const speed = input.boost ? 7.5 : 4.8;
+  if (input.left) benja.vx = -speed;
+  else if (input.right) benja.vx = speed;
+  else benja.vx = 0;
+
+  benja.vy += 0.7;
+  benja.x += benja.vx;
+  benja.y += benja.vy;
+
+  benja.onGround = false;
+  platforms.forEach(p => {
+    if (benja.x + benja.w > p.x && benja.x < p.x + p.w &&
+        benja.y + benja.h >= p.y && benja.y + benja.h <= p.y + 18 && benja.vy >= 0) {
+      benja.y = p.y - benja.h;
+      benja.vy = 0;
+      benja.onGround = true;
+      if (p.mat === 'clay' && input.jump) {
+        benja.vy = -19;
+        emitSound(987, 0.2);
+      }
+    }
+  });
+
+  stars.forEach(s => {
+    if (!s.collected && benja.x + benja.w > s.x && benja.x < s.x + 24 && benja.y + benja.h > s.y && benja.y < s.y + 24) {
+      s.collected = true;
+      benja.score += 100;
+      emitSound(1046, 0.15);
+    }
+  });
+
+  if (benja.x < 0) benja.x = 0;
+  if (benja.x > 914) benja.x = 914;
+  if (benja.y > 600) { benja.x = 80; benja.y = 360; benja.vy = 0; }
+}
+
+function draw() {
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  platforms.forEach(p => {
+    ctx.fillStyle = p.color;
+    if (p.mat === 'clay') {
+      ctx.beginPath();
+      ctx.roundRect(p.x, p.y, p.w, p.h, 12);
+      ctx.fill();
+    } else {
+      ctx.fillRect(p.x, p.y, p.w, p.h);
+      if (p.mat === 'lego') {
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        for (let bx = p.x + 6; bx < p.x + p.w - 6; bx += 18) ctx.fillRect(bx, p.y - 5, 12, 5);
+      }
+    }
+  });
+
+  stars.forEach(s => {
+    if (!s.collected) {
+      ctx.fillStyle = '#ffd600';
+      ctx.font = '24px sans-serif';
+      ctx.fillText('⭐', s.x, s.y + 20);
+    }
+  });
+
+  // Dibujar a Benja
+  ctx.save();
+  ctx.translate(benja.x, benja.y);
+  ctx.fillStyle = '#0288d1';
+  ctx.fillRect(8, 28, 30, 32);
+  ctx.fillStyle = '#ffca28';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.fillText('B', 19, 48);
+
+  ctx.fillStyle = '#ffdfba';
+  ctx.beginPath(); ctx.arc(23, 16, 15, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#111';
+  ctx.beginPath(); ctx.arc(23, 12, 16, Math.PI, Math.PI*2); ctx.fill();
+
+  ctx.fillStyle = '#ffdfba';
+  ctx.fillRect(17, 16, 8, 8);
+  ctx.restore();
+
+  // Texto
+  ctx.fillStyle = '#ffca28';
+  ctx.font = 'bold 18px sans-serif';
+  ctx.fillText('ZIVA GAMES • HEROE: ADRIEN BENJAMÍN', 25, 36);
+  ctx.fillStyle = '#fff';
+  ctx.fillText('PUNTOS: ' + benja.score, 25, 62);
+}
+
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+</script>
+</body>
+</html>
