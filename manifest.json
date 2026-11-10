@@ -1,0 +1,19 @@
+{
+  "name": "SuperBenja: El Mundo de los Juguetes",
+  "short_name": "SuperBenja",
+  "description": "Videojuego de plataformas interactivo para Adrien Benjamín y sus amigos",
+  "start_url": "/SuperBenja/",
+  "scope": "/SuperBenja/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#121829",
+  "theme_color": "#121829",
+  "icons": [
+    {
+      "src": "IMG_0244.jpeg",
+      "sizes": "192x192 512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
